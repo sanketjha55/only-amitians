@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Only Amitians | Official Hub</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <style>
+    #loadingOverlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.9); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:9999; }
+    .spinner { width:50px; height:50px; border:5px solid #eee; border-top:5px solid #3498db; border-radius:50%; animation:spin 1s linear infinite; }
+    @keyframes spin { 0%{transform:rotate(0deg);} 100%{transform:rotate(360deg);} }
+    .search-dropdown { position:absolute; background:white; width:100%; max-height:250px; overflow-y:auto; border-radius:8px; box-shadow:0 8px 16px rgba(0,0,0,0.1); z-index:1000; top:110%; display:none; }
+    .search-item { padding:12px; border-bottom:1px solid #eee; cursor:pointer; text-align:left; color:#333; }
+    .back-btn { background:#3498db; color:white; border:none; padding:10px 20px; border-radius:8px; margin-bottom:20px; cursor:pointer; font-weight:bold; }
+    .hidden { display: none !important; }
+    .admin-row { display:flex; justify-content:space-between; align-items:center; background:#f9f9f9; padding:12px; margin-bottom:8px; border-radius:8px; border:1px solid #ddd; color: #333; }
+    .action-btns i { cursor:pointer; margin-left:15px; font-size: 1.1rem; }
+    .fa-trash:hover { color:#e74c3c; } .fa-edit:hover { color:#3498db; }
+    .tip-scroll { display:flex; overflow:hidden; white-space:nowrap; width:100%; background:#fffbe6; padding:10px 0; border:1px solid #ffe58f; margin-top:20px; }
+    .tip-text-scroll { display:inline-block; animation: marquee 30s linear infinite; color:#856404; font-weight:bold; padding-left:100%; }
+    @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
+  </style>
+</head>
+<body>
+
+<div id="loadingOverlay"><div class="spinner"></div><p style="margin-top:10px;">Wait Bhai, Kam Chal Raha Hai...</p></div>
+
+<div class="login-card" id="loginPage">
+  <img src="logo.png" class="logo">
+  <h1 class="title">Only Amitians</h1>
+  <div class="buttons">
+    <button onclick="openStudent()">Student Hub</button>
+    <button onclick="openAdmin()">Admin Portal</button>
+  </div>
+  <div id="adminBox" style="display:none; margin-top:15px;">
+    <input type="password" id="adminPassword" placeholder="Admin PIN">
+    <button onclick="adminLogin()">Enter</button>
+  </div>
+  <div class="tip-bar">
+    <span class="tip-label">STUDY TIPS:</span>
+    <div class="tip-scroll"><span id="tipMarquee" class="tip-text-scroll">Study Hard! Fetching latest tips for you...</span></div>
+  </div>
+</div>
+
+<div class="admin-container" id="adminPage" style="display:none;">
+  <div class="sidebar">
+    <div class="logo">Admin Control</div>
+    <nav class="nav-menu">
+      <a href="#" onclick="showForm('deptForm')"><i class="fas fa-university"></i> Departments/Courses</a>
+      <a href="#" onclick="showForm('docForm')"><i class="fas fa-file-upload"></i> Upload/Manage Files</a>
+      <a href="#" onclick="showForm('newsForm')"><i class="fas fa-bullhorn"></i> News & Tips</a>
+    </nav>
+    <button onclick="goLogin()" class="logout-btn">Logout</button>
+  </div>
+
+  <div class="main-content">
+    <div id="deptForm" class="admin-form">
+      <h3>Manage Departments</h3>
+      <input type="text" id="dCode" placeholder="Code (e.g. ASET)">
+      <input type="text" id="dName" placeholder="Full Department Name">
+      <button class="primary-btn" onclick="addD()">Save Department</button>
+      <div id="adminDeptList" style="margin-top:15px;"></div>
+      <hr>
+      <h3>Manage Courses</h3>
+      <select id="courseDeptSelect" class="sh-search"></select>
+      <input type="text" id="courseName" placeholder="Course Name (e.g. B.Tech CSE)">
+      <button class="primary-btn" onclick="addCourse()">Add Course</button>
+      <div id="adminCourseList" style="margin-top:15px;"></div>
+    </div>
+
+    <div id="docForm" class="admin-form" style="display:none;">
+      <h3>Upload Material</h3>
+      <select id="selDept" class="sh-search" onchange="loadAdminCourses()"></select>
+      <select id="selCourse" class="sh-search" style="margin-top:10px;"></select>
+      <select id="selSem" class="sh-search" style="margin-top:10px;">
+        <option value="1">Semester 1</option><option value="2">Semester 2</option>
+        <option value="3">Semester 3</option><option value="4">Semester 4</option>
+        <option value="5">Semester 5</option><option value="6">Semester 6</option>
+        <option value="7">Semester 7</option><option value="8">Semester 8</option>
+      </select>
+      <select id="selCat" class="sh-search" style="margin-top:10px;">
+        <option value="Notes">Notes</option><option value="PYQs">PYQs</option>
+        <option value="PPTs">PPTs</option><option value="Practicals">Practicals</option>
+      </select>
+      <input type="text" id="docT" placeholder="Document Title">
+      <input type="file" id="fInput" style="margin:10px 0;">
+      <button class="primary-btn" onclick="upDoc()">Upload PDF</button>
+      <hr>
+      <h3>Current Files</h3>
+      <div id="adminDocList"></div>
+    </div>
+
+    <div id="newsForm" class="admin-form" style="display:none;">
+      <h3>Campus News</h3>
+      <input type="text" id="newsT" placeholder="Headline">
+      <textarea id="newsD" placeholder="News Details..."></textarea>
+      <button class="primary-btn" onclick="addNews()">Post News</button>
+      <div id="adminNewsList" style="margin-top:15px;"></div>
+      <hr>
+      <h3>Study Tips</h3>
+      <input type="text" id="tipIn" placeholder="Enter tip...">
+      <button class="primary-btn" onclick="addTip()">Add Tip</button>
+      <div id="adminTipList" style="margin-top:15px;"></div>
+    </div>
+  </div>
+</div>
+
+<div class="student-body" id="studentPage" style="display:none;">
+  <div class="student-container">
+    <header class="sh-header">
+      <div class="sh-left"><img src="logo.png" class="sh-logo"><h1 class="sh-title">Only Amitians</h1></div>
+      <div class="sh-search-wrap" style="position:relative;">
+        <input id="uSearch" class="sh-search" placeholder="Search for files..." oninput="liveSearch(this.value)">
+        <div id="searchRes" class="search-dropdown"></div>
+      </div>
+    </header>
+
+    <div id="studentView">
+      <button id="backBtn" class="back-btn hidden" onclick="handleBack()">← BACK</button>
+      <div id="newsWrapper">
+        <h2 style="color:#2c3e50; margin:20px 0;"><i class="fas fa-bullhorn"></i> Campus News</h2>
+        <div id="newsSection" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:15px;"></div>
+      </div>
+      <h2 id="viewTitle" style="color:#2c3e50; margin:20px 0;">Select Department</h2>
+      <section class="portal-icons" id="mainGrid"></section>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
