@@ -18,6 +18,17 @@ const showLoader = () => $("loadingOverlay").style.display = "flex";
 const hideLoader = () => $("loadingOverlay").style.display = "none";
 const cleanName = (n) => n.replace(/[^a-zA-Z0-9.]/g, '_').replace(/_{2,}/g, '_');
 const asList = (data) => Array.isArray(data) ? data : [];
+const isNetworkLoadError = (error) => {
+    const msg = String(error?.message || "").toLowerCase();
+    return msg.includes("failed to fetch") || msg.includes("load failed") || msg.includes("networkerror");
+};
+const notifyFallbackSave = (entity, error) => {
+    if (isNetworkLoadError(error)) {
+        alert(`${entity} local mode me save ho gaya. Supabase connect nahi ho pa raha.`);
+        return;
+    }
+    alert(`${entity} local mode me save ho gaya. Supabase error: ${error.message}`);
+};
 const localRows = (table) => {
     try {
         return JSON.parse(localStorage.getItem(LOCAL_KEYS[table]) || "[]");
@@ -92,7 +103,14 @@ async function renderGrid() {
         }
     } catch (e) {
         console.error(e);
-        grid.innerHTML = `<div class="portal-item"><div class="pi-title">Data load issue. Please try again.</div></div>`;
+        if (currentFlow.step === "dept") {
+            const departments = localRows("departments");
+            const sem4Card = `<div class="portal-item" onclick="window.open('${SEM4_DRIVE_LINK}', '_blank')"><div class="pi-ico">📚</div><div class="pi-title">BTech CSE Sem 4 Drive</div></div>`;
+            const deptCards = departments.map(d => `<div class="portal-item" onclick="selD('${d.code}')"><div class="pi-ico">🏫</div><div class="pi-title">${d.code}</div></div>`).join("");
+            grid.innerHTML = sem4Card + deptCards;
+        } else {
+            grid.innerHTML = `<div class="portal-item"><div class="pi-title">Data load issue. Please try again.</div></div>`;
+        }
     }
     hideLoader();
 }
@@ -145,7 +163,7 @@ window.addD = async () => {
     const { error } = await supabase.from("departments").insert([{ code, name }]);
     if (error) {
         saveLocalRow("departments", { code, name });
-        alert(`Supabase save failed, locally saved instead: ${error.message}`);
+        notifyFallbackSave("Department", error);
     }
     syncAdmin();
 };
@@ -157,7 +175,7 @@ window.addCourse = async () => {
     const { error } = await supabase.from("courses").insert([{ dept_code, name }]);
     if (error) {
         saveLocalRow("courses", { dept_code, name });
-        alert(`Supabase save failed, locally saved instead: ${error.message}`);
+        notifyFallbackSave("Course", error);
     }
     syncAdmin();
 };
@@ -169,7 +187,7 @@ window.addNews = async () => {
     const { error } = await supabase.from("news").insert([{ title, description }]);
     if (error) {
         saveLocalRow("news", { title, description });
-        alert(`Supabase save failed, locally saved instead: ${error.message}`);
+        notifyFallbackSave("News", error);
     }
     syncAdmin();
 };
@@ -180,7 +198,7 @@ window.addTip = async () => {
     const { error } = await supabase.from("tips").insert([{ content }]);
     if (error) {
         saveLocalRow("tips", { content });
-        alert(`Supabase save failed, locally saved instead: ${error.message}`);
+        notifyFallbackSave("Tip", error);
     }
     syncAdmin();
 };
