@@ -2,6 +2,7 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 const SUPABASE_URL = "https://erpugsanonwocuockbfl.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVycHVnc2Fub253b2N1b2NrYmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgwNjc1NTEsImV4cCI6MjA4MzY0MzU1MX0.QDftsH8dPVYQN0rsTbJqpMyh3KQwlQzJ7VM0VLElGX0";
+const SEM4_DRIVE_LINK = "https://drive.google.com/drive/folders/1gUwjzRV33DCBd_Eq-Fo2rpO0qm9nebGU";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const $ = id => document.getElementById(id);
 
@@ -25,7 +26,8 @@ async function renderGrid() {
             back.classList.add('hidden'); news.classList.remove('hidden');
             title.innerText = "Select Department";
             const { data } = await supabase.from("departments").select("*");
-            grid.innerHTML = data.map(d => `<div class="portal-item" onclick="selD('${d.code}')"><div class="pi-ico">🏫</div><div class="pi-title">${d.code}</div></div>`).join("");
+            const sem4Card = `<div class="portal-item" onclick="window.open('${SEM4_DRIVE_LINK}', '_blank')"><div class="pi-ico">📚</div><div class="pi-title">BTech CSE Sem 4 Drive</div></div>`;
+            grid.innerHTML = sem4Card + data.map(d => `<div class="portal-item" onclick="selD('${d.code}')"><div class="pi-ico">🏫</div><div class="pi-title">${d.code}</div></div>`).join("");
         } else {
             back.classList.remove('hidden'); news.classList.add('hidden');
             if(currentFlow.step === 'course') {
@@ -161,7 +163,13 @@ async function syncHome() {
     if(n) $("newsSection").innerHTML = n.map(x => `<div class="news-card"><h4>${x.title}</h4><p>${x.description}</p></div>`).join("");
 }
 
-window.openStudent = () => { $("loginPage").style.display="none"; $("studentPage").style.display="block"; renderGrid(); syncHome(); };
+window.openStudent = () => {
+    document.body.style.alignItems = "flex-start";
+    $("loginPage").style.display="none";
+    $("studentPage").style.display="block";
+    renderGrid();
+    syncHome();
+};
 window.openAdmin = () => $("adminBox").style.display="block";
 window.adminLogin = () => { if($("adminPassword").value==="10062006") { $("loginPage").style.display="none"; $("adminPage").style.display="flex"; syncAdmin(); } };
 window.goLogin = () => location.reload();
