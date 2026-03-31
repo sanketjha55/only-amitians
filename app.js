@@ -2,7 +2,6 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 const SUPABASE_URL = "https://erpugsanonwocuockbfl.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVycHVnc2Fub253b2N1b2NrYmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgwNjc1NTEsImV4cCI6MjA4MzY0MzU1MX0.QDftsH8dPVYQN0rsTbJqpMyh3KQwlQzJ7VM0VLElGX0";
-const SEM4_DRIVE_LINK = "https://drive.google.com/drive/folders/1gUwjzRV33DCBd_Eq-Fo2rpO0qm9nebGU";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const $ = id => document.getElementById(id);
 const LOCAL_KEYS = {
@@ -72,9 +71,8 @@ async function renderGrid() {
                 localRows("departments"),
                 (d) => `${d.code}`
             );
-            const sem4Card = `<div class="portal-item" onclick="window.open('${SEM4_DRIVE_LINK}', '_blank')"><div class="pi-ico">📚</div><div class="pi-title">BTech CSE Sem 4 Drive</div></div>`;
             const deptCards = departments.map(d => `<div class="portal-item" onclick="selD('${d.code}')"><div class="pi-ico">🏫</div><div class="pi-title">${d.code}</div></div>`).join("");
-            grid.innerHTML = sem4Card + deptCards;
+            grid.innerHTML = deptCards || "No departments found.";
         } else {
             back.classList.remove('hidden'); news.classList.add('hidden');
             if(currentFlow.step === 'course') {
@@ -105,9 +103,8 @@ async function renderGrid() {
         console.error(e);
         if (currentFlow.step === "dept") {
             const departments = localRows("departments");
-            const sem4Card = `<div class="portal-item" onclick="window.open('${SEM4_DRIVE_LINK}', '_blank')"><div class="pi-ico">📚</div><div class="pi-title">BTech CSE Sem 4 Drive</div></div>`;
             const deptCards = departments.map(d => `<div class="portal-item" onclick="selD('${d.code}')"><div class="pi-ico">🏫</div><div class="pi-title">${d.code}</div></div>`).join("");
-            grid.innerHTML = sem4Card + deptCards;
+            grid.innerHTML = deptCards || `<div class="portal-item"><div class="pi-title">No departments found.</div></div>`;
         } else {
             grid.innerHTML = `<div class="portal-item"><div class="pi-title">Data load issue. Please try again.</div></div>`;
         }
