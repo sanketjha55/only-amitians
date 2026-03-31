@@ -2,18 +2,6 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 const SUPABASE_URL = "https://erpugsanonwocuockbfl.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVycHVnc2Fub253b2N1b2NrYmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgwNjc1NTEsImV4cCI6MjA4MzY0MzU1MX0.QDftsH8dPVYQN0rsTbJqpMyh3KQwlQzJ7VM0VLElGX0";
-const SEM4_DRIVE_ROOT = "https://drive.google.com/drive/folders/1gUwjzRV33DCBd_Eq-Fo2rpO0qm9nebGU";
-const SEM4_PYQ_SUBJECTS = [
-    "AM4",
-    "BS",
-    "BSL",
-    "DMS",
-    "DNN",
-    "GERMAN",
-    "JAVA",
-    "OS",
-    "TOC"
-];
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const $ = id => document.getElementById(id);
 const LOCAL_KEYS = {
@@ -102,22 +90,13 @@ async function renderGrid() {
                 grid.innerHTML = [1,2,3,4,5,6,7,8].map(s => `<div class="portal-item" onclick="selS('${s}')"><div class="pi-ico">📅</div><div class="pi-title">Sem ${s}</div></div>`).join("");
             } else if(currentFlow.step === 'cat') {
                 title.innerText = "Choose Category";
-                grid.innerHTML = ["PYQs"].map(c => `<div class="portal-item" onclick="selCat('${c}')"><div class="pi-ico">📂</div><div class="pi-title">${c}</div></div>`).join("");
+                grid.innerHTML = ["Notes", "PYQs", "PPTs", "Practicals"].map(c => `<div class="portal-item" onclick="selCat('${c}')"><div class="pi-ico">📂</div><div class="pi-title">${c}</div></div>`).join("");
             } else if(currentFlow.step === 'files') {
                 title.innerText = "Available Files";
                 const { data, error } = await supabase.from("documents").select("*").eq("department", currentFlow.dept).eq("course", currentFlow.course).eq("semester", currentFlow.sem).eq("category", currentFlow.cat);
                 if (error) throw error;
                 const files = asList(data);
-
-                const isSem4PyqFlow = String(currentFlow.sem) === "4" && currentFlow.cat === "PYQs";
-
-                const defaultPyqCards = SEM4_PYQ_SUBJECTS.map((subject) => ({
-                    title: `${subject} PYQs`,
-                    file_url: `${SEM4_DRIVE_ROOT}?q=${encodeURIComponent(subject + " pyq")}`
-                }));
-
-                const finalFiles = isSem4PyqFlow ? defaultPyqCards : files;
-                grid.innerHTML = finalFiles.map(f => `<div class="portal-item" onclick="window.open('${f.file_url}')"><div class="pi-ico">📄</div><div class="pi-title">${f.title}</div></div>`).join("") || "No PYQs found.";
+                grid.innerHTML = files.map(f => `<div class="portal-item" onclick="window.open('${f.file_url}')"><div class="pi-ico">📄</div><div class="pi-title">${f.title}</div></div>`).join("") || "No files found.";
             }
         }
     } catch (e) {
