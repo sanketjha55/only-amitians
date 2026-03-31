@@ -109,16 +109,14 @@ async function renderGrid() {
                 if (error) throw error;
                 const files = asList(data);
 
-                const normalizedDept = (currentFlow.dept || "").toLowerCase();
-                const normalizedCourse = (currentFlow.course || "").toLowerCase();
-                const isAsetCseSem4Pyq = normalizedDept.includes("aset") && normalizedCourse.includes("b.tech") && normalizedCourse.includes("cse") && String(currentFlow.sem) === "4" && currentFlow.cat === "PYQs";
+                const isSem4PyqFlow = String(currentFlow.sem) === "4" && currentFlow.cat === "PYQs";
 
                 const defaultPyqCards = SEM4_PYQ_SUBJECTS.map((subject) => ({
                     title: `${subject} PYQs`,
                     file_url: `${SEM4_DRIVE_ROOT}?q=${encodeURIComponent(subject + " pyq")}`
                 }));
 
-                const finalFiles = isAsetCseSem4Pyq ? defaultPyqCards : files;
+                const finalFiles = isSem4PyqFlow ? defaultPyqCards : files;
                 grid.innerHTML = finalFiles.map(f => `<div class="portal-item" onclick="window.open('${f.file_url}')"><div class="pi-ico">📄</div><div class="pi-title">${f.title}</div></div>`).join("") || "No PYQs found.";
             }
         }
