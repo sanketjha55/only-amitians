@@ -5,6 +5,12 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const SEM4_DRIVE_LINK = "https://drive.google.com/drive/folders/1gUwjzRV33DCBd_Eq-Fo2rpO0qm9nebGU";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const $ = id => document.getElementById(id);
+const LOCAL_KEYS = {
+    departments: "oa_departments",
+    courses: "oa_courses",
+    news: "oa_news",
+    tips: "oa_tips"
+};
 
 let currentFlow = { step: 'dept', dept: '', course: '', sem: '', cat: '' };
 
@@ -12,6 +18,28 @@ const showLoader = () => $("loadingOverlay").style.display = "flex";
 const hideLoader = () => $("loadingOverlay").style.display = "none";
 const cleanName = (n) => n.replace(/[^a-zA-Z0-9.]/g, '_').replace(/_{2,}/g, '_');
 const asList = (data) => Array.isArray(data) ? data : [];
+const localRows = (table) => {
+    try {
+        return JSON.parse(localStorage.getItem(LOCAL_KEYS[table]) || "[]");
+    } catch {
+        return [];
+    }
+};
+const saveLocalRow = (table, row) => {
+    const rows = localRows(table);
+    rows.unshift({ ...row, id: row.id || Date.now() });
+    localStorage.setItem(LOCAL_KEYS[table], JSON.stringify(rows));
+};
+const mergeRows = (remoteRows, fallbackRows, keyFn) => {
+    const merged = [...asList(remoteRows), ...asList(fallbackRows)];
+    const seen = new Set();
+    return merged.filter((row) => {
+        const key = keyFn(row);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+};
 
 // --- STUDENT NAVIGATION ---
 async function renderGrid() {
@@ -28,8 +56,11 @@ async function renderGrid() {
             news.classList.remove('hidden');
             title.innerText = "Select Department";
             const { data, error } = await supabase.from("departments").select("*");
-            if (error) throw error;
-            const departments = asList(data);
+            const departments = mergeRows(
+                error ? [] : data,
+                localRows("departments"),
+                (d) => `${d.code}`
+            );
             const sem4Card = `<div class="portal-item" onclick="window.open('${SEM4_DRIVE_LINK}', '_blank')"><div class="pi-ico">📚</div><div class="pi-title">BTech CSE Sem 4 Drive</div></div>`;
             const deptCards = departments.map(d => `<div class="portal-item" onclick="selD('${d.code}')"><div class="pi-ico">🏫</div><div class="pi-title">${d.code}</div></div>`).join("");
             grid.innerHTML = sem4Card + deptCards;
@@ -38,8 +69,12 @@ async function renderGrid() {
             if(currentFlow.step === 'course') {
                 title.innerText = `Courses in ${currentFlow.dept}`;
                 const { data, error } = await supabase.from("courses").select("*").eq("dept_code", currentFlow.dept);
-                if (error) throw error;
-                const courses = asList(data);
+                const localCourses = localRows("courses").filter((c) => c.dept_code === currentFlow.dept);
+                const courses = mergeRows(
+                    error ? [] : data,
+                    localCourses,
+                    (c) => `${c.dept_code}::${c.name}`
+                );
                 grid.innerHTML = courses.map(c => `<div class="portal-item" onclick="selC('${c.name}')"><div class="pi-ico">🎓</div><div class="pi-title">${c.name}</div></div>`).join("") || "No courses found.";
             } else if(currentFlow.step === 'sem') {
                 title.innerText = "Select Semester";
@@ -85,11 +120,11 @@ async function syncAdmin() {
     const { data: news } = await supabase.from("news").select("*");
     const { data: tips } = await supabase.from("tips").select("*");
 
-    const deptList = asList(depts);
-    const courseList = asList(courses);
+    const deptList = mergeRows(depts, localRows("departments"), (d) => `${d.code}`);
+    const courseList = mergeRows(courses, localRows("courses"), (c) => `${c.dept_code}::${c.name}`);
     const docList = asList(docs);
-    const newsList = asList(news);
-    const tipList = asList(tips);
+    const newsList = mergeRows(news, localRows("news"), (n) => `${n.title}::${n.description || ""}`);
+    const tipList = mergeRows(tips, localRows("tips"), (t) => `${t.content}`);
 
     const opt = deptList.map(d => `<option value="${d.code}">${d.name}</option>`).join("");
     $("courseDeptSelect").innerHTML = `<option value="">Select Department</option>` + opt;
@@ -103,23 +138,50 @@ async function syncAdmin() {
 }
 
 window.addD = async () => {
-    const { error } = await supabase.from("departments").insert([{ code:$("dCode").value, name:$("dName").value }]);
-    if (error) return alert(`Department add failed: ${error.message}`);
+    const code = $("dCode").value.trim().toUpperCase();
+    const name = $("dName").value.trim();
+    if (!code || !name) return alert("Department code and name are required.");
+
+    const { error } = await supabase.from("departments").insert([{ code, name }]);
+    if (error) {
+        saveLocalRow("departments", { code, name });
+        alert(`Supabase save failed, locally saved instead: ${error.message}`);
+    }
     syncAdmin();
 };
 window.addCourse = async () => {
-    const { error } = await supabase.from("courses").insert([{ dept_code:$("courseDeptSelect").value, name:$("courseName").value }]);
-    if (error) return alert(`Course add failed: ${error.message}`);
+    const dept_code = $("courseDeptSelect").value.trim();
+    const name = $("courseName").value.trim();
+    if (!dept_code || !name) return alert("Select department and enter course name.");
+
+    const { error } = await supabase.from("courses").insert([{ dept_code, name }]);
+    if (error) {
+        saveLocalRow("courses", { dept_code, name });
+        alert(`Supabase save failed, locally saved instead: ${error.message}`);
+    }
     syncAdmin();
 };
 window.addNews = async () => {
-    const { error } = await supabase.from("news").insert([{ title:$("newsT").value, description:$("newsD").value }]);
-    if (error) return alert(`News add failed: ${error.message}`);
+    const title = $("newsT").value.trim();
+    const description = $("newsD").value.trim();
+    if (!title) return alert("News title is required.");
+
+    const { error } = await supabase.from("news").insert([{ title, description }]);
+    if (error) {
+        saveLocalRow("news", { title, description });
+        alert(`Supabase save failed, locally saved instead: ${error.message}`);
+    }
     syncAdmin();
 };
 window.addTip = async () => {
-    const { error } = await supabase.from("tips").insert([{ content:$("tipIn").value }]);
-    if (error) return alert(`Tip add failed: ${error.message}`);
+    const content = $("tipIn").value.trim();
+    if (!content) return alert("Tip cannot be empty.");
+
+    const { error } = await supabase.from("tips").insert([{ content }]);
+    if (error) {
+        saveLocalRow("tips", { content });
+        alert(`Supabase save failed, locally saved instead: ${error.message}`);
+    }
     syncAdmin();
 };
  
@@ -182,8 +244,10 @@ window.delItem = async (table, id) => {
 };
 
 window.loadAdminCourses = async () => {
-    const { data } = await supabase.from("courses").select("*").eq("dept_code", $("selDept").value);
-    const courses = asList(data);
+    const deptCode = $("selDept").value;
+    const { data } = await supabase.from("courses").select("*").eq("dept_code", deptCode);
+    const localCourses = localRows("courses").filter((c) => c.dept_code === deptCode);
+    const courses = mergeRows(data, localCourses, (c) => `${c.dept_code}::${c.name}`);
     $("selCourse").innerHTML = courses.map(c => `<option value="${c.name}">${c.name}</option>`).join("");
 };
 
@@ -199,9 +263,12 @@ window.liveSearch = async (val) => {
 
 async function syncHome() {
     const { data: t } = await supabase.from("tips").select("*");
-    if(t) $("tipMarquee").innerText = t.map(x => x.content).join("  •  🚀  •  ");
+    const tips = mergeRows(t, localRows("tips"), (x) => `${x.content}`);
+    if(tips.length) $("tipMarquee").innerText = tips.map(x => x.content).join("  •  🚀  •  ");
+
     const { data: n } = await supabase.from("news").select("*").order('created_at',{ascending:false});
-    if(n) $("newsSection").innerHTML = n.map(x => `<div class="news-card"><h4>${x.title}</h4><p>${x.description}</p></div>`).join("");
+    const news = mergeRows(n, localRows("news"), (x) => `${x.title}::${x.description || ""}`);
+    if(news.length) $("newsSection").innerHTML = news.map(x => `<div class="news-card"><h4>${x.title}</h4><p>${x.description || ""}</p></div>`).join("");
 }
 
 window.openStudent = () => {
@@ -212,7 +279,15 @@ window.openStudent = () => {
     syncHome();
 };
 window.openAdmin = () => $("adminBox").style.display="block";
-window.adminLogin = () => { if($("adminPassword").value==="10062006") { $("loginPage").style.display="none"; $("adminPage").style.display="flex"; syncAdmin(); } };
+window.adminLogin = () => {
+    if($("adminPassword").value !== "10062006") {
+        alert("Wrong admin PIN");
+        return;
+    }
+    $("loginPage").style.display="none";
+    $("adminPage").style.display="flex";
+    syncAdmin();
+};
 window.goLogin = () => location.reload();
 window.showForm = id => { document.querySelectorAll(".admin-form").forEach(f => f.style.display="none"); $(id).style.display="block"; };
 
